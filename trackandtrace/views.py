@@ -63,9 +63,9 @@ def dashboard(request):
             for x in transport_records.find():
                 if x['to_user'].split(',')[-1] ==uid:
                     box_id_in.append(x['box_id'])
-            #print('box_id_in',box_id_in)
+            print('box_id_in',box_id_in)
             for x in box_id_in:
-                #print("current box",x)
+                print("current box",x)
                 ret_temp=retailer_stock_records.find_one({'box_id':x})
                 if ret_temp is not None:
                     #print('hello')
@@ -99,7 +99,7 @@ def dashboard(request):
             total_opening_balance=len(list(set(total_product_in)))
             total_outstock_balance=len(list(set(total_product_out)))
             total_production=total_opening_balance+total_outstock_balance
-            #print('total_opening_balance',total_opening_balance,'total_outstock_balance',total_outstock_balance)
+            print('total_opening_balance',total_opening_balance,'total_outstock_balance',total_outstock_balance)
     #print(total_opening_balance) #total opening balance
     #total_production =len(total_stock) # total product
     in_stock_pie=total_opening_balance
@@ -290,7 +290,7 @@ def InStock(request):
     uid = str(profile.uuid)
     usertype = str(profile.usertype)
     groups = username.groups.all()  # Get the groups associated with the user
-    #print('uid', uid)
+    print('uid', uid)
     # mango connection starts from here
     client = MongoClient(
         "mongodb+srv://ajaytiwarinitjsr:Ajt02011998@cluster0.umftw04.mongodb.net/?retryWrites=true&w=majority",
@@ -310,7 +310,7 @@ def InStock(request):
         product_id = []
         dstr_id = uid
         # mango connection end here
-        #print('username', username)
+        print('username', username)
         for x in transport_records.find():
             datas = x['from_user'].split(',')[0]
             if datas == dstr_id:
@@ -319,7 +319,7 @@ def InStock(request):
         for x in store_records.find({'uid': dstr_id}):
             if (x['box_id'] not in box_id_out and x['box_id'] not in box_id_in):
                 box_id_in.append(x['box_id'])
-        #print(box_id_out, box_id_in)
+        print(box_id_out, box_id_in)
         # receiver_name=user_records.find_one({'uid':receiver_id})['registered_name']
         product_counts=[]
         for x in box_id_in:
@@ -337,7 +337,7 @@ def InStock(request):
             for x1 in store_records.find({'box_id': x}):
                 product_id.append(x1['product_qrcode'])
         product_id = list(set(product_id))
-        #print('box_id', box_id, 'product_id', product_id)
+        print('box_id', box_id, 'product_id', product_id)
         # print('receiver_name',receiver_name)
         total_products=len(product_counts)
         total_boxes_in=len(box_id_in)
@@ -377,18 +377,18 @@ def InStock(request):
         # receiver_name = user_records.find_one({'uid': receiver_id})['registered_name']
         # print('receiver_id',receiver_id,'receiver_name',receiver_name)
         box_id_in = list(set(box_id_in))
-        #print(box_id_in, box_id_out)
+        print(box_id_in, box_id_out)
         product_counts=0
         for x in box_id_in:
             for x1 in store_records.find({'box_id': x}):
                 box_in_data.append(x1)
-                #print('x1',x1['product_qrcode'].split(','))
+                print('x1',x1['product_qrcode'].split(','))
                 product_counts+=len(x1['product_qrcode'].split(','))
-        #print('box_in_data:', box_in_data)
+        print('box_in_data:', box_in_data)
         for x in box_id_out:
             for x1 in store_records.find({'box_id': x}):
                 box_out_data.append(x1)
-        #print('box_out_data', box_out_data)
+        print('box_out_data', box_out_data)
         box_id_in=list(set(box_id_in))
         # instock box
         #total_box=len(box_id_in)
@@ -407,6 +407,7 @@ def InStock(request):
             'uid': uid
         }
     elif usertype == 'Retailer':
+        """
         retailer_id = uid
         box_id_in = []
         product_in = []
@@ -444,8 +445,8 @@ def InStock(request):
         total_box_in = len(list(set(unique_boxes)))
         total_boxes=len(list(set(box_id_in)))
         total_box_out = len(list(set(box_id_in).difference(set(unique_boxes))))
-        total_product=list(set(unique_products))
-        total_products=len(total_product)
+        total_products=len(list(set(unique_products)))
+        #total_products=len(total_product)
         context = {
             'username': username,
             'groups': groups,
@@ -458,6 +459,65 @@ def InStock(request):
             'total_box_out':total_box_out,
             'uid': uid
         }
+        """
+        retailer_id = uid
+        box_id_in = []
+        product_in = []
+        product_out = []
+        product_in_item = []
+        product_out_item = []
+        for x in transport_records.find():
+            if x['to_user'].split(',')[-1] == retailer_id:
+                box_id_in.append(x['box_id'])
+        print('box_id_in', box_id_in)
+        total_product = 0
+        unique_products_out = []
+        unique_products_in = []
+        unique_boxes = []
+        temp_in_box = []  # to store temporary
+        x2={}
+        for x in box_id_in:
+            if retailer_stock_records.find_one({'box_id': x}) is not None:
+                box_rec_data = store_records.find_one({'box_id': x})
+                for x1 in retailer_stock_records.find({'box_id': x}, {'_id': 0}):
+                    if x1['product_status'] == 'OUT':
+                        unique_boxes.append(x1['box_id'])
+                        unique_products_out.append(x1['product_qrcode'])
+                        x1['brand'] = box_rec_data['brand']
+                        x1['quantity'] = box_rec_data['quantity']
+                        x1['mfg_date'] = box_rec_data['mfg_date']
+                        x1['date'] = datetime.datetime.now().date()
+                        product_out_item.append(x1)
+                    else:
+                        x2['box_id']=x1['box_id']
+                        x2['product_qrcode'] = x1['product_qrcode']
+                        x2['product_status'] = x1['product_status']
+                        x2['brand'] = box_rec_data['brand']
+                        x2['quantity'] = box_rec_data['quantity']
+                        x2['mfg_date'] = box_rec_data['mfg_date']
+                        x2['date'] = datetime.datetime.now().date()
+                        unique_products_in.append(x1['product_qrcode'])
+                        temp_in_box.append(x1['box_id'])
+                        product_in_item.append(x2)
+        total_boxes = len(list(set(box_id_in)))
+        total_box_in = len(list(set(temp_in_box)))
+        total_box_out = abs(total_boxes - total_box_in)
+        total_products_out = len(list(set(unique_products_out)))
+        total_products_in = len(list(set(unique_products_in)))
+        context = {
+            'data_in': product_in_item,
+            'data_out': product_out_item,
+            'total_product_out': total_products_out,
+            'total_product_in': total_products_in,
+            'total_box': total_boxes,
+            'total_box_in': total_box_in,
+            'total_box_out': total_box_out,
+            'status': 'OUT',
+            'receiver_name': 'Customer',
+            'uid': retailer_id,
+        }
+        # print(context)
+        #print(context)
     return render(request, 'in_stock.html', context)
 
 
@@ -469,7 +529,7 @@ def OutStock(request):
     uid = str(profile.uuid)
     usertype = str(profile.usertype)
     groups = username.groups.all()  # Get the groups associated with the user
-    #print('uid', uid)
+    print('uid', uid)
     # mango connection starts from here
     client = MongoClient(
         "mongodb+srv://ajaytiwarinitjsr:Ajt02011998@cluster0.umftw04.mongodb.net/?retryWrites=true&w=majority",
@@ -489,7 +549,7 @@ def OutStock(request):
         product_id = []
         dstr_id = uid
         # mango connection end here
-        #print('username', username)
+        print('username', username)
         if len(list(transport_records.find())) > 0:
             for x in transport_records.find():
                 datas = x['from_user'].split(',')[0]
@@ -517,8 +577,8 @@ def OutStock(request):
                 for x1 in store_records.find({'box_id': x}):
                     product_id.append(x1['product_qrcode'])
             product_id = list(set(product_id))
-            #print('box_id', box_id, 'product_id', product_id)
-            #print('receiver_name', receiver_name)
+            print('box_id', box_id, 'product_id', product_id)
+            print('receiver_name', receiver_name)
             total_products=len(product_counts)
             total_boxes_out=len(box_id_out)
             total_boxes_in=len(box_id_in)
@@ -573,17 +633,17 @@ def OutStock(request):
             receiver_id = x['to_user'].split(',')[-1]
             receiver_name = user_records.find_one({'uid': receiver_id})['registered_name']
             box_id_in = list(set(box_id_in))
-            #print(box_id_in, box_id_out)
+            print(box_id_in, box_id_out)
             product_counts=0
             for x in box_id_in:
                 for x1 in store_records.find({'box_id': x}):
                     box_in_data.append(x1)
-            #print('box_in_data:', box_in_data)
+            print('box_in_data:', box_in_data)
             for x in box_id_out:
                 for x1 in store_records.find({'box_id': x}):
                     box_out_data.append(x1)
                     product_counts+=len(x1['product_qrcode'].split(','))
-            #print('box_out_data', box_out_data)
+            print('box_out_data', box_out_data)
             # instock box
             box_id_out=set(box_id_out)
             total_boxes = len(box_id_out)
@@ -615,6 +675,7 @@ def OutStock(request):
                 'uid': uid
             }
     elif usertype == 'Retailer':
+        """
         retailer_id = uid
         box_id_in = []
         product_in = []
@@ -624,13 +685,13 @@ def OutStock(request):
         for x in transport_records.find():
             if x['to_user'].split(',')[-1] == retailer_id:
                 box_id_in.append(x['box_id'])
-        #print(box_id_in)
+        print(box_id_in)
         total_product = 0
         unique_products=[]
         unique_boxes=[]
-        brand=[]
-        quantity=[]
-        mfg_date=[]
+        #brand=[]
+        #quantity=[]
+        #mfg_date=[]
         temp_in_box=[] #to store temporary
         for x in box_id_in:
             if retailer_stock_records.find_one({'box_id':x}) is not None:
@@ -639,8 +700,8 @@ def OutStock(request):
                 for x1 in retailer_stock_records.find({'box_id':x},{'_id':0}):
                     if x1['product_status'] == 'OUT':
                         #product_out.append(x1['product_qrcode'])
-                        unique_products.append(x1['box_id'])
-                        unique_boxes.append(x1['product_qrcode'])
+                        unique_boxes.append(x1['box_id'])
+                        unique_products.append(x1['product_qrcode'])
                         ##print('x1',type(x1))
                         x1['brand']=box_rec_data['brand']
                         x1['quantity']=box_rec_data['quantity']
@@ -652,14 +713,15 @@ def OutStock(request):
                         temp_in_box.append(x1['box_id'])
                         product_in_item.append(x1)
         #print('product_out', len(set(product_out)), 'product_in', len(set(product_in)))
-        #print(product_in_item)
+        print(product_in_item)
         #total_box = len(box_id_in)
         total_boxes=len(list(set(box_id_in)))
         total_box_in = len(list(set(temp_in_box)))
-        total_box_out=len(list(set(box_id_in).difference(set(temp_in_box))))
-        total_product = list(set(unique_products))
-        total_products = len(total_product)
-        zip_context=zip(product_out_item,brand,quantity,mfg_date)
+        #total_box_out=len(list(set(box_id_in).difference(set(temp_in_box))))
+        total_box_out=abs(total_boxes-total_box_in)
+        total_products = len(list(set(unique_products)))
+        #total_products = len(total_product)
+        #zip_context=zip(product_out_item,brand,quantity,mfg_date)
         context = {
             'username': username,
             'groups': groups,
@@ -673,7 +735,66 @@ def OutStock(request):
             'receiver_name': 'Customer',
             'uid': uid,
         }
-        #print('username',username,'uid',uid)
+        print('username',username,'uid',uid)
+        """
+        retailer_id = 'retr003'
+        box_id_in = []
+        product_in = []
+        product_out = []
+        product_in_item = []
+        product_out_item = []
+        for x in transport_records.find():
+            if x['to_user'].split(',')[-1] == retailer_id:
+                box_id_in.append(x['box_id'])
+        print('box_id_in', box_id_in)
+        total_product = 0
+        unique_products_out = []
+        unique_products_in = []
+        unique_boxes = []
+        temp_in_box = []  # to store temporary
+        x2={}
+        for x in box_id_in:
+            if retailer_stock_records.find_one({'box_id': x}) is not None:
+                box_rec_data = store_records.find_one({'box_id': x})
+                for x1 in retailer_stock_records.find({'box_id': x}, {'_id': 0}):
+                    if x1['product_status'] == 'OUT':
+                        unique_boxes.append(x1['box_id'])
+                        unique_products_out.append(x1['product_qrcode'])
+                        x1['brand'] = box_rec_data['brand']
+                        x1['quantity'] = box_rec_data['quantity']
+                        x1['mfg_date'] = box_rec_data['mfg_date']
+                        x1['date'] = datetime.datetime.now().date()
+                        product_out_item.append(x1)
+                    else:
+                        x2['box_id'] = x1['box_id']
+                        x2['product_qrcode'] = x1['product_qrcode']
+                        x2['product_status'] = x1['product_status']
+                        x2['brand'] = box_rec_data['brand']
+                        x2['quantity'] = box_rec_data['quantity']
+                        x2['mfg_date'] = box_rec_data['mfg_date']
+                        x2['date'] = datetime.datetime.now().date()
+                        unique_products_in.append(x1['product_qrcode'])
+                        temp_in_box.append(x1['box_id'])
+                        product_in_item.append(x2)
+        total_boxes = len(list(set(box_id_in)))
+        total_box_in = len(list(set(temp_in_box)))
+        total_box_out = abs(total_boxes - total_box_in)
+        total_products_out = len(list(set(unique_products_out)))
+        total_products_in = len(list(set(unique_products_in)))
+        context = {
+            'data_in': product_in_item,
+            'data_out': product_out_item,
+            'total_product_out': total_products_out,
+            'total_product_in': total_products_in,
+            'total_box': total_boxes,
+            'total_box_in': total_box_in,
+            'total_box_out': total_box_out,
+            'status': 'OUT',
+            'receiver_name': 'Customer',
+            'uid': retailer_id,
+        }
+        # print(context)
+        #print(context)
     return render(request, 'out_stock.html', context)
 
 
@@ -688,7 +809,7 @@ def tracking_items(request):
     uid = str(profile.uuid)
     usertype = str(profile.usertype)
     groups = username.groups.all()  # Get the groups associated with the user
-    #print('uid', uid)
+    print('uid', uid)
     # mango connection starts from here
     client = MongoClient(
         "mongodb+srv://ajaytiwarinitjsr:Ajt02011998@cluster0.umftw04.mongodb.net/?retryWrites=true&w=majority",
@@ -705,7 +826,7 @@ def tracking_items(request):
     if request.method == 'POST':
         box_id = request.POST.get('box_id')
         product_id=request.POST.get('product_id')
-        #print('box_id', len(box_id),"product_id",len(product_id))
+        print('box_id', len(box_id),"product_id",len(product_id))
         traced = []
         ids = []
         name_traced = []
